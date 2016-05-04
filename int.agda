@@ -1,6 +1,6 @@
---open import Agda.Builtin.Equality
---open import Agda.Builtin.Nat
---open import Agda.Builtin.Int
+open import Agda.Builtin.Equality
+open import Agda.Builtin.Nat
+open import Agda.Builtin.Int
 
 open import prelude 
 open import nat 
@@ -37,15 +37,32 @@ module _ where
   ≤I-trans (nn h1) np = np
   ≤I-trans (nn h1) (nn h2) = nn (≤N-trans h2 h1)
 
-  ≤I-total : (x y : Int) → (x ≤I y) ∨ (y ≤I x)
+  ≤I-respects-≡ : {x y : Int} → x ≡ y → x ≤I y
+  ≤I-respects-≡ refl = ≤I-refl
+
+  ≤I-total : (x y : Int) → x ≤I y ∨ y ≤I x
   ≤I-total (pos n) (pos o) with ≤N-total n o
   ≤I-total (pos n) (pos o) | inl h1 = inl (pp h1)
   ≤I-total (pos n) (pos o) | inr h1 = inr (pp h1)
   ≤I-total (pos n) (negsuc o) = inr np
   ≤I-total (negsuc n) (pos o) = inl np
-  ≤I-total (negsuc n) (negsuc o) with ≤N-total n o
-  ≤I-total (negsuc n) (negsuc o) | inl h1 = inr (nn h1)
-  ≤I-total (negsuc n) (negsuc o) | inr h1 = inl (nn h1)
+  ≤I-total (negsuc n) (negsuc o) with ≤N-total o n
+  ≤I-total (negsuc n) (negsuc o) | inl h1 = inl (nn h1)
+  ≤I-total (negsuc n) (negsuc o) | inr h1 = inr (nn h1)
+
+  ≤I-decidable : (x y : Int) → x ≤I y ∨ ¬ x ≤I y
+  ≤I-decidable (pos n) (pos o) with ≤N-decidable  n o 
+  ≤I-decidable (pos n) (pos o) | inl h1 = inl (pp h1)
+  ≤I-decidable (pos n) (pos o) | inr h1 = inr (λ h2 → h1 (≤I-abs h2)) where
+    ≤I-abs : ∀ {n o} → pos n ≤I pos o → n ≤N o
+    ≤I-abs (pp h1) = h1
+  ≤I-decidable (pos n) (negsuc o) = inr (λ ())
+  ≤I-decidable (negsuc n) (pos o) = inl np
+  ≤I-decidable (negsuc n) (negsuc o) with ≤N-decidable o n
+  ≤I-decidable (negsuc n) (negsuc o) | inl h1 = inl (nn h1)
+  ≤I-decidable (negsuc n) (negsuc o) | inr h1 = inr (λ h2 → h1 (≤I-abs h2)) where
+    ≤I-abs : ∀ {n o} → negsuc n ≤I negsuc o → o ≤N n
+    ≤I-abs (nn h1) = h1
 
   infixr 1 _≤I⟨_⟩_ 
   _≤I⟨_⟩_ : (x : Int) {y z : Int} → (x ≤I y) → (y ≤I z) → (x ≤I z)
@@ -54,6 +71,42 @@ module _ where
   infix 2 _≤I∎
   _≤I∎ : (x : Int) → x ≤I x
   _≤I∎  _ = ≤I-refl
+
+  infix 4 _<I_
+  data _<I_ : Int → Int → Set where
+    pp : {n o : Nat} → n <N o → pos n <I pos o
+    np : {n o : Nat} → negsuc n <I pos o
+    nn : {n o : Nat} → n <N o → negsuc o <I negsuc n
+
+  <I-total : (x y : Int) → (x <I y) ∨ (x ≡ y) ∨ (y <I x)
+  <I-total (pos n) (pos o) with <N-total n o
+  <I-total (pos n) (pos o) | inl h1 = inl (pp h1)
+  <I-total (pos n) (pos .n) | inr (inl refl) = inr (inl refl)
+  <I-total (pos _) (pos .0) | inr (inr zn) = inr (inr (pp zn))
+  <I-total (pos _) (pos _) | inr (inr (ss h1)) = inr (inr (pp (ss h1)))
+  <I-total (pos n) (negsuc o) = inr (inr np)
+  <I-total (negsuc n) (pos o) = inl np
+  <I-total (negsuc n) (negsuc o) with <N-total n o
+  <I-total (negsuc n) (negsuc o) | inl h1 = inr (inr (nn h1))
+  <I-total (negsuc n) (negsuc .n) | inr (inl refl) = inr (inl refl)
+  <I-total (negsuc _) (negsuc .0) | inr (inr zn) = inl (nn zn)
+  <I-total (negsuc _) (negsuc _) | inr (inr (ss h1)) = inl (nn (ss h1))
+
+  <I⇒¬≡ : {x y : Int} → x <I y → ¬ x ≡ y
+  <I⇒¬≡ (pp (ss h1)) refl = ⊥-elim (<I⇒¬≡ (pp h1) refl)
+  <I⇒¬≡ np ()
+  <I⇒¬≡ (nn (ss h1)) refl = ⊥-elim (<I⇒¬≡ (pp h1) refl)
+
+  >I⇒¬≡ : {x y : Int} → y <I x → ¬ x ≡ y
+  >I⇒¬≡ (pp (ss h1)) refl = ⊥-elim (>I⇒¬≡ (pp h1) refl)
+  >I⇒¬≡ np ()
+  >I⇒¬≡ (nn (ss h1)) refl = ⊥-elim (>I⇒¬≡ (pp h1) refl)
+
+  ≡I-decidable : (x y : Int) → x ≡ y ∨ ¬ x ≡ y
+  ≡I-decidable x y with <I-total x y
+  ≡I-decidable x y | inl h1 = inr (<I⇒¬≡ h1)
+  ≡I-decidable x y | inr (inl h1) = inl h1
+  ≡I-decidable x y | inr (inr h1) = inr (>I⇒¬≡ h1)
 
   {- Addition -}
 
@@ -198,6 +251,56 @@ module _ where
   ↑I⇒≤I {negsuc n} {pos o} refl = np
   ↑I⇒≤I {negsuc n} {negsuc o} p = nn (↓N⇒≤N (negsuc-injective p))
 
+  {- Minimum -}
 
+  ↓I : Int → Int → Int
+  ↓I (pos x) (pos y) = pos (↓N x y)
+  ↓I (pos x) (negsuc y) = negsuc y
+  ↓I (negsuc x) (pos y) = negsuc x
+  ↓I (negsuc x) (negsuc y) = negsuc (↑N x y)
 
+  example-↓I = ↓I (pos 1) (pos 2)
+
+  ↓I-comm : (x y : Int) → ↓I x y ≡ ↓I y x
+  ↓I-comm (pos n) (pos o) = ≡-cong pos (↓N-comm n o)
+  ↓I-comm (pos n) (negsuc o) = refl
+  ↓I-comm (negsuc n) (pos o) = refl
+  ↓I-comm (negsuc n) (negsuc o) = ≡-cong negsuc (↑N-comm n o)
+
+  ↓I-assoc : (x y z : Int) → ↓I x (↓I y z) ≡ ↓I (↓I x y) z
+  ↓I-assoc (pos x) (pos y) (pos z) = ≡-cong pos (↓N-assoc x y z) 
+  ↓I-assoc (pos x) (pos y) (negsuc z) = refl
+  ↓I-assoc (pos x) (negsuc y) (pos n) = refl
+  ↓I-assoc (pos x) (negsuc y) (negsuc n) = refl
+  ↓I-assoc (negsuc x) (pos y) (pos z) = refl
+  ↓I-assoc (negsuc x) (pos y) (negsuc z) = refl
+  ↓I-assoc (negsuc x) (negsuc y) (pos z) = refl
+  ↓I-assoc (negsuc x) (negsuc y) (negsuc z) = ≡-cong negsuc (↑N-assoc x y z) 
+
+  ≤I⇒↓I : {x y : Int} → x ≤I y → ↓I y x ≡ x
+  ≤I⇒↓I (pp p) = ≡-cong pos (≤N⇒↓N p) 
+  ≤I⇒↓I np = refl
+  ≤I⇒↓I {negsuc o} {negsuc n} (nn p) = ≡-cong negsuc (≤N⇒↑N p) 
+
+  ↓I⇒≤I : {x y : Int} → ↓I y x ≡ x → x ≤I y
+  ↓I⇒≤I {pos n} {pos o} h1 = pp (↓N⇒≤N (pos-injective h1))
+  ↓I⇒≤I {pos n} {negsuc o} ()
+  ↓I⇒≤I {negsuc n} {pos o} refl = np
+  ↓I⇒≤I {negsuc n} {negsuc o} p = nn (↑N⇒≤N (negsuc-injective p))
+
+  ↑I-distrib : (x y z : Int) → ↑I x  (↓I y z) ≡ ↓I (↑I x y) (↑I x z)
+  ↑I-distrib (pos n) (pos o) (pos p) = ≡-cong pos (↑N-distrib n o p)
+  ↑I-distrib (pos n) (pos o) (negsuc p) = ≡-cong pos (≡-sym (↓↑N n o)) 
+  ↑I-distrib (pos n) (negsuc o) (pos p) = 
+    pos n
+      ≡⟨ ≡-cong pos (≡-sym (↓↑N n p)) ⟩
+    pos (↓N (↑N n p) n)
+      ≡⟨ ≡-cong pos (↓N-comm (↑N n p) n) ⟩
+    pos (↓N n (↑N n p))
+      ≡∎
+  ↑I-distrib (pos n) (negsuc o) (negsuc p) = ≡-cong pos (≡-sym (≤N⇒↓N ≤N-refl))
+  ↑I-distrib (negsuc n) (pos o) (pos p) = refl
+  ↑I-distrib (negsuc n) (pos o) (negsuc p) = refl
+  ↑I-distrib (negsuc n) (negsuc o) (pos p) = refl
+  ↑I-distrib (negsuc n) (negsuc o) (negsuc p) = ≡-cong negsuc (↓N-distrib n o p)
 

@@ -1,8 +1,8 @@
---open import Agda.Builtin.Equality
---open import Agda.Builtin.Nat
---open import Agda.Builtin.Int
---open import Agda.Builtin.Bool
---open import Agda.Builtin.List
+open import Agda.Builtin.Equality
+open import Agda.Builtin.Nat
+open import Agda.Builtin.Int
+open import Agda.Builtin.Bool
+open import Agda.Builtin.List
 
 open import prelude
 open import nat
@@ -43,13 +43,12 @@ module _ where
   example-mss-spec = mss-spec (pos 1 ∷+ negsuc 2 ∷+ [ pos 3 ]+)
 
   max+-flatten+ : (xs : List+ (List+ Int)) → (max+ ∘ flatten+) xs ≡ (max+ ∘ map+ max+) xs
-  max+-flatten+ [ x ]+ = refl
-  max+-flatten+ (x ∷+ xs) = 
-    foldr+ ↑I id (x +++ foldr+ _+++_ id xs)
-      ≡⟨ max+-+++ x (foldr+ _+++_ id xs) ⟩
-    ↑I (foldr+ ↑I id x) (foldr+ ↑I id (foldr+ _+++_ id xs))
-      ≡⟨ ≡-cong (λ c → ↑I (foldr+ ↑I id x) c) (max+-flatten+ xs) ⟩
-    ↑I (foldr+ ↑I id x) ((max+ ∘ map+ max+) xs)
+  max+-flatten+ xs =
+    (max+ ∘ flatten+) xs
+      ≡⟨ foldr+-fusion _+++_ (↑I ∘ max+) id max+ max+-+++ xs ⟩
+    foldr+ (↑I ∘ max+) (id ∘ max+) xs
+      ≡⟨ ≡-sym (map+-fusion ↑I id max+ xs) ⟩
+    (max+ ∘ map+ max+) xs
       ≡∎ where
     max+-+++ : (xs ys : List+ Int) → max+ (xs +++ ys) ≡ ↑I (max+ xs) (max+ ys)
     max+-+++ [ x ]+ ys = refl
@@ -61,7 +60,10 @@ module _ where
       ↑I (↑I x (foldr+ ↑I id xs)) (foldr+ ↑I id ys)
         ≡∎ 
 
-  mss-derivation : (xs : List+ Int) → mss-spec  xs  ≡ (max+ ∘ scanr+ (λ x1 x2 → x1 +I ↑I (pos zero) x2) id) xs
+  mss : List+ Int → Int
+  mss = max+ ∘ scanr+ (λ x1 x2 → x1 +I ↑I (pos zero) x2) id
+
+  mss-derivation : (xs : List+ Int) → mss-spec  xs  ≡ mss xs
   mss-derivation xs = 
     (max+ ∘ map+ sum+ ∘ flatten+ ∘ map+ inits+ ∘ tails+) xs
       ≡⟨ ≡-cong (λ c → max+ c) (map+-flatten+ sum+ ((map+ inits+ ∘ tails+) xs)) ⟩
@@ -118,8 +120,8 @@ module _ where
   sawtooth n = up-to+ n +++ reverse+ (down-from+ n) +++ down-from+ n +++ reverse+ (up-to+ n)
 
   sawtooth-mss-spec : (n : Nat) → Int
-  sawtooth-mss-spec n = (max+ ∘ (map+ sum+) ∘ segs+) (sawtooth n)
+  sawtooth-mss-spec = mss-spec ∘ sawtooth
 
   sawtooth-mss : (n : Nat) → Int
-  sawtooth-mss n = (max+ ∘ scanr+ (λ x1 x2 → x1 +I ↑I (pos zero) x2) id) (sawtooth n)
+  sawtooth-mss = mss ∘ sawtooth
 

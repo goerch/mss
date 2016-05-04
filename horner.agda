@@ -1,6 +1,6 @@
---open import Agda.Builtin.Equality
---open import Agda.Builtin.Nat
---open import Agda.Builtin.Int
+open import Agda.Builtin.Equality
+open import Agda.Builtin.Nat
+open import Agda.Builtin.Int
 
 open import prelude
 open import nat
@@ -24,7 +24,7 @@ module _ where
     x + x * foldr+ (λ x1 x2 → x1 * suc x2) id xs
       ≡⟨ ≡-cong (λ c → c + x * (foldr+ (λ x1 x2 → x1 * suc x2) id xs)) (≡-sym (*N-unit x)) ⟩
     x * 1 + x * foldr+ (λ x1 x2 → x1 * suc x2) id xs
-      ≡⟨ ≡-sym (N-distrib x 1 (foldr+ (λ x1 x2 → x1 * suc x2) id xs)) ⟩ 
+      ≡⟨ ≡-sym (*N-distrib x 1 (foldr+ (λ x1 x2 → x1 * suc x2) id xs)) ⟩ 
     x * suc (foldr+ (λ x1 x2 → x1 * suc x2) id xs)
       ≡∎ where
     go : (x : Nat) (ys : List+ (List+ Nat)) → foldr+ _+_ id (map+ (foldr+ _*_ id) (map+ (_∷+_ x) ys)) ≡ x * (foldr+ _+_ id ∘ map+ (foldr+ _*_ id)) ys
@@ -33,7 +33,7 @@ module _ where
       foldr+ _+_ id (map+ (foldr+ _*_ id) (map+ (_∷+_ x) (y ∷+ ys)))
         ≡⟨ ≡-cong (λ c → x * foldr+ _*_ id y + c) (go x ys) ⟩
       x * foldr+ _*_ id y + x * foldr+ _+_ id (map+ (foldr+ _*_ id) ys)
-        ≡⟨ ≡-sym (N-distrib x (foldr+ _*_ id y) (foldr+ _+_ id (map+ (foldr+ _*_ id) ys))) ⟩
+        ≡⟨ ≡-sym (*N-distrib x (foldr+ _*_ id y) (foldr+ _+_ id (map+ (foldr+ _*_ id) ys))) ⟩
       x * (foldr+ _+_ id ∘ map+ (foldr+ _*_ id)) (y ∷+ ys)
         ≡∎
 
